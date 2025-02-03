@@ -13,7 +13,7 @@ class MessageInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final firestoreService = Provider.of<FirestoreService>(context);
-    final currentUserId = Provider.of<AuthService>(context).getCurrentUserId();
+    final currentUserId = Provider.of<AuthService>(context).currentUser;
 
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -37,7 +37,7 @@ class MessageInput extends StatelessWidget {
                   Message(
                     id: '',
                     text: _controller.text.trim(),
-                    senderId: currentUserId!,
+                    senderId: currentUserId!.id,
                     timestamp: DateTime.now(),
                   ),
                 );

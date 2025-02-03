@@ -1,10 +1,10 @@
-import 'package:escrow_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/firestore_service.dart';
-import '../models/message_model.dart';
-import '../widgets/message_bubble.dart';
-import '../widgets/message_input.dart';
+import 'package:escrow_app/services/auth_service.dart';
+import 'package:escrow_app/services/firestore_service.dart';
+import 'package:escrow_app/models/message_model.dart';
+import 'package:escrow_app/widgets/message_bubble.dart';
+import 'package:escrow_app/widgets/message_input.dart';
 
 class ChatScreen extends StatelessWidget {
   final String contractId;
@@ -14,7 +14,7 @@ class ChatScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final firestoreService = Provider.of<FirestoreService>(context);
-    final currentUserId = Provider.of<AuthService>(context).getCurrentUserId();
+    final currentUser = Provider.of<AuthService>(context).currentUser;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Contract Chat')),
@@ -24,25 +24,35 @@ class ChatScreen extends StatelessWidget {
             child: StreamBuilder<List<Message>>(
               stream: firestoreService.getMessages(contractId),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                var messages = snapshot.data!;
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Error loading messages'));
+                }
+
+                final messages = snapshot.data ?? [];
                 return ListView.builder(
                   reverse: true,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    var message = messages[index];
+                    final message = messages[index];
                     return MessageBubble(
                       message: message,
-                      isMe: message.senderId == currentUserId,
+                      isMe: message.senderId == currentUser?.id,
                     );
                   },
                 );
               },
             ),
           ),
-          MessageInput(contractId: contractId),
+          if (currentUser != null)
+            MessageInput(contractId: contractId)
+          else
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text('You must be logged in to send messages'),
+            ),
         ],
       ),
     );

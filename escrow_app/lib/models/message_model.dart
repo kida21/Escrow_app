@@ -26,7 +26,7 @@ class Message {
     return {
       'text': text,
       'senderId': senderId,
-      'timestamp': timestamp,
+      'timestamp': Timestamp.fromDate(timestamp),
     };
   }
 }
