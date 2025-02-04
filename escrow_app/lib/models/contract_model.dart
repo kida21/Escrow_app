@@ -11,6 +11,7 @@ class Contract {
   final String paymentTerms;
   final String status; 
   final DateTime createdAt;
+  
 
   Contract({
     required this.id,
@@ -21,8 +22,9 @@ class Contract {
     required this.endDate,
     required this.paymentAmount,
     required this.paymentTerms,
-    this.status = 'draft',
+    this.status = 'pending',
     required this.createdAt,
+  
   });
 
   factory Contract.fromMap(Map<String, dynamic> data, String id) => Contract(
@@ -36,6 +38,7 @@ class Contract {
         paymentTerms: data['paymentTerms'],
         status: data['status'],
         createdAt: (data['createdAt'] as Timestamp).toDate(),
+        
       );
 
   Map<String, dynamic> toMap() => {

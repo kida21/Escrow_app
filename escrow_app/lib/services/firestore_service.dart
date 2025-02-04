@@ -7,8 +7,9 @@ import '../models/contract_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-   
-  // Add to FirestoreService class
+  
+  
+  
   Stream<List<Message>> getMessages(String contractId) {
     return _firestore
         .collection('chats')
@@ -16,6 +17,7 @@ class FirestoreService {
         .collection('messages')
         .orderBy('timestamp', descending: true)
         .snapshots()
+        .handleError((error) => print("Error fetching messages: $error"))
         .map((snapshot) => snapshot.docs
             .map((doc) => Message.fromMap(doc.data(), doc.id))
             .toList());
@@ -56,8 +58,14 @@ class FirestoreService {
     final docRef = _firestore.collection('contracts').doc();
     await docRef.set({
       ...contract.toMap(),
-      'id': docRef.id, // Store document ID in the data
+      'id': docRef.id, 
     });
+  }
+
+  Future<Contract> getContract(String contractId) async {
+    final doc = await _firestore.collection('contracts').doc(contractId).get();
+    if (!doc.exists) throw Exception('Contract not found');
+    return Contract.fromMap(doc.data()!, doc.id);
   }
 
   Stream<List<Contract>> getSentContracts(String userId) {
@@ -80,10 +88,27 @@ class FirestoreService {
             .toList());
   }
 
-  Future<void> updateContractStatus(String contractId, String status) async {
-    await _firestore
-        .collection('contracts')
-        .doc(contractId)
-        .update({'status': status});
+  Future<void> updateContractStatus(
+    String contractId,
+    String status,
+    String receiverId,
+  ) async {
+    final docRef = _firestore.collection('contracts').doc(contractId);
+
+    
+    final contract =
+        await docRef.get().then((s) => Contract.fromMap(s.data()!, s.id));
+    if (contract.receiverId != receiverId) throw Exception('Unauthorized');
+
+    await docRef.update({'status': status});
+
+    
+    if (status == 'accepted') {
+      await _firestore.collection('chats').doc(contractId).set({
+        'participants': [contract.senderId, contract.receiverId],
+        'contractId': contractId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
   }
 }

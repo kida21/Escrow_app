@@ -11,7 +11,14 @@ import 'screens/contract_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options:const FirebaseOptions(
+      apiKey: "AIzaSyCn-Y_lwKG_1oVpRAwQ0vWkEyFkWm4-f4o", 
+      appId: "1:1090202880600:android:5e64b3882bf7a04a75182d", 
+      messagingSenderId: "1090202880600", 
+      projectId: "escrow-2bb21"
+      )
+  );
   runApp(const MyApp());
 }
 
