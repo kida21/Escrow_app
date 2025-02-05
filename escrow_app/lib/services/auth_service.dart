@@ -7,10 +7,10 @@ class AuthService {
   final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Get current Firebase User
+ 
   firebase_auth.User? get firebaseUser => _auth.currentUser;
 
-  // Get current AppUser
+  
   AppUser? get currentUser {
     final user = _auth.currentUser;
     if (user == null) return null;
@@ -21,7 +21,7 @@ class AuthService {
     );
   }
 
-  // Stream of AppUser
+  
   Stream<AppUser?> get userStream {
     return _auth.authStateChanges().map((firebaseUser) {
       if (firebaseUser == null) return null;
@@ -66,7 +66,7 @@ class AuthService {
     }
   }
 
-  // Sign In with Email and Password
+  
   Future<void> signIn(String email, String password) async {
     try {
       await _auth.signInWithEmailAndPassword(
@@ -78,6 +78,6 @@ class AuthService {
     }
   }
 
-  // Sign Out
+
   Future<void> signOut() async => await _auth.signOut();
 }

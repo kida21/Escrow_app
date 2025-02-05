@@ -5,12 +5,14 @@ class Message {
   final String text;
   final String senderId;
   final DateTime timestamp;
+  final bool edited;
 
   Message({
     required this.id,
     required this.text,
     required this.senderId,
     required this.timestamp,
+    this.edited = false,
   });
 
   factory Message.fromMap(Map<String, dynamic> data, String id) {
@@ -19,6 +21,7 @@ class Message {
       text: data['text'],
       senderId: data['senderId'],
       timestamp: (data['timestamp'] as Timestamp).toDate(),
+      edited: data['edited'] ?? false,
     );
   }
 

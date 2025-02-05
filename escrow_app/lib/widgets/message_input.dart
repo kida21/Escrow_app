@@ -4,11 +4,24 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/firestore_service.dart';
 
-class MessageInput extends StatelessWidget {
+class MessageInput extends StatefulWidget {
   final String contractId;
-  final TextEditingController _controller = TextEditingController();
 
-  MessageInput({super.key, required this.contractId});
+  const MessageInput({super.key, required this.contractId});
+
+  @override
+  State<MessageInput> createState() => _MessageInputState();
+}
+
+class _MessageInputState extends State<MessageInput> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.requestFocus();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,31 +35,60 @@ class MessageInput extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: _controller,
+              focusNode: _focusNode, 
+              readOnly: false,
+              autofocus: true,
               decoration: const InputDecoration(
                 hintText: 'Type a message...',
                 border: OutlineInputBorder(),
               ),
+              onSubmitted: (_) async {
+                if (_controller.text.trim().isNotEmpty &&
+                    currentUserId != null) {
+                  await firestoreService.sendMessage(
+                    widget.contractId,
+                    Message(
+                      id: '',
+                      text: _controller.text.trim(),
+                      senderId: currentUserId.id,
+                      timestamp: DateTime.now(),
+                    ),
+                  );
+                  _controller.clear();
+                  _focusNode
+                      .requestFocus(); 
+                }
+              },
             ),
           ),
           IconButton(
             icon: const Icon(Icons.send),
             onPressed: () async {
-              if (_controller.text.trim().isNotEmpty) {
+              if (_controller.text.trim().isNotEmpty && currentUserId != null) {
                 await firestoreService.sendMessage(
-                  contractId,
+                  widget.contractId,
                   Message(
                     id: '',
                     text: _controller.text.trim(),
-                    senderId: currentUserId!.id,
+                    senderId: currentUserId.id,
                     timestamp: DateTime.now(),
                   ),
                 );
                 _controller.clear();
+                _focusNode
+                    .requestFocus(); 
               }
             },
           ),
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose(); 
+    super.dispose();
   }
 }

@@ -34,6 +34,43 @@ class FirestoreService {
       'timestamp': Timestamp.fromDate(message.timestamp),
     });
   }
+  Future<void> editMessage({
+    required String contractId,
+    required String messageId,
+    required String newText,
+  }) async {
+    try {
+      await _firestore
+          .collection('chats')
+          .doc(contractId)
+          .collection('messages')
+          .doc(messageId)
+          .update({
+        'text': newText,
+        'edited': true, 
+        'timestamp': FieldValue.serverTimestamp(), 
+      });
+    } catch (e) {
+      print("Error editing message: $e");
+      rethrow; 
+    }
+  }
+  Future<void> deleteMessage({
+    required String contractId,
+    required String messageId,
+  }) async {
+    try {
+      await _firestore
+          .collection('chats')
+          .doc(contractId)
+          .collection('messages')
+          .doc(messageId)
+          .delete();
+    } catch (e) {
+      print("Error deleting message: $e");
+      rethrow;
+    }
+  }
 
   // Users
   Future<List<AppUser>> getUsers() async {
@@ -41,19 +78,35 @@ class FirestoreService {
     final snapshot = await FirebaseFirestore.instance
         .collection('users')
         .where(FieldPath.documentId,
-            isNotEqualTo: currentUserId) // Exclude current user
+            isNotEqualTo: currentUserId) 
         .get();
 
-    // Map to ensure unique users by ID
+    
     final users = snapshot.docs
         .map((doc) => AppUser.fromMap(doc.data(), doc.id))
         .toList();
 
-    // Remove duplicates (if any)
+    
     return users.toSet().toList();
   }
 
-  // Contracts
+  Future<AppUser?> getUserById(String userId) async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      if (userDoc.exists) {
+        return AppUser.fromMap(userDoc.data()!,userId);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching user: $e');
+      return null;
+    }
+  }
+
+  
   Future<void> createContract(Contract contract) async {
     final docRef = _firestore.collection('contracts').doc();
     await docRef.set({
@@ -86,6 +139,24 @@ class FirestoreService {
         .map((snapshot) => snapshot.docs
             .map((doc) => Contract.fromMap(doc.data(), doc.id))
             .toList());
+  }
+  Future<void> deleteContract(String contractId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('contracts')
+          .doc(contractId)
+          .delete();
+    } catch (e) {
+      print('Error deleting contract: $e');
+      rethrow; 
+    }
+  }
+
+  Future<void> updateContract(Contract contract) async {
+    await FirebaseFirestore.instance
+        .collection('contracts')
+        .doc(contract.id)
+        .update(contract.toMap());
   }
 
   Future<void> updateContractStatus(

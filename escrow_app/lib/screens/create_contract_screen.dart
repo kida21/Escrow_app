@@ -1,13 +1,15 @@
+import 'package:escrow_app/models/contract_model.dart';
 import 'package:escrow_app/models/user_model.dart';
+import 'package:escrow_app/services/auth_service.dart';
+import 'package:escrow_app/services/firestore_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../models/contract_model.dart';
-import '../services/firestore_service.dart';
-import '../services/auth_service.dart';
 
 class CreateContractScreen extends StatefulWidget {
-  const CreateContractScreen({super.key});
+  final Contract? contract; 
+
+  const CreateContractScreen({super.key, this.contract});
 
   @override
   State<CreateContractScreen> createState() => _CreateContractScreenState();
@@ -22,10 +24,49 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
   DateTime? _endDate;
   AppUser? _selectedReceiver;
 
+ @override
+  void initState() {
+    super.initState();
+
+    
+    if (widget.contract != null) {
+      final contract = widget.contract!;
+      _titleController.text = contract.title;
+      _paymentAmountController.text = contract.paymentAmount.toString();
+      _paymentTermsController.text = contract.paymentTerms;
+      _startDate = contract.startDate;
+      _endDate = contract.endDate;
+
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          final firestoreService =
+              Provider.of<FirestoreService>(context, listen: false);
+          final receiver =
+              await firestoreService.getUserById(contract.receiverId);
+
+          if (receiver != null) {
+            setState(() {
+              _selectedReceiver = receiver; 
+            });
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Error loading receiver details')),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error fetching receiver: $e')),
+          );
+        }
+      });
+    }
+  }
+
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: _startDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime(2100),
     );
@@ -47,7 +88,8 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create New Contract'),
+        title: Text(
+            widget.contract == null ? 'Create New Contract' : 'Edit Contract'),
         centerTitle: true,
       ),
       body: Padding(
@@ -56,7 +98,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
           key: _formKey,
           child: ListView(
             children: [
-              // Contract Title Field
+              
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(
@@ -72,8 +114,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                 },
               ),
               const SizedBox(height: 20),
-
-              // Start Date Picker
+              
               ListTile(
                 title: Text(
                   _startDate == null
@@ -88,7 +129,6 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                 onTap: () => _selectDate(context, true),
               ),
               const SizedBox(height: 10),
-
               // End Date Picker
               ListTile(
                 title: Text(
@@ -104,8 +144,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                 onTap: () => _selectDate(context, false),
               ),
               const SizedBox(height: 20),
-
-              // Payment Details
+             
               Row(
                 children: [
                   Expanded(
@@ -151,8 +190,7 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                 ],
               ),
               const SizedBox(height: 25),
-
-              // Receiver Selection Dropdown
+              
               FutureBuilder<List<AppUser>>(
                 future: firestoreService.getUsers(),
                 builder: (context, snapshot) {
@@ -170,12 +208,12 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                       prefixIcon: Icon(Icons.person_search),
                     ),
                     value: _selectedReceiver,
-                    items: users.map((user)=> 
-                       DropdownMenuItem<AppUser>(
-                        value: user,
-                        child: Text(user.name),
-                      )
-                    ).toList(),
+                    items: users
+                        .map((user) => DropdownMenuItem<AppUser>(
+                              value: user,
+                              child: Text(user.name),
+                            ))
+                        .toList(),
                     validator: (value) {
                       if (value == null) {
                         return 'Please select a receiver';
@@ -183,17 +221,12 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                       return null;
                     },
                     onChanged: (user) =>
-                        setState(() =>
-                          _selectedReceiver = user
-                          //print('Selected Receiver: ${user?.name}');
-                        ),
-                        
+                        setState(() => _selectedReceiver = user),
                   );
                 },
               ),
               const SizedBox(height: 30),
-
-              // Submit Button
+              
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -211,8 +244,9 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                       if (currentUser == null)
                         throw Exception('User not logged in');
 
-                      final newContract = Contract(
-                        id: '', 
+                      final contract = Contract(
+                        id: widget.contract?.id ??
+                            '', 
                         title: _titleController.text,
                         senderId: currentUser.id,
                         receiverId: _selectedReceiver!.id,
@@ -221,21 +255,28 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
                         paymentAmount:
                             double.parse(_paymentAmountController.text),
                         paymentTerms: _paymentTermsController.text,
-                        createdAt: DateTime.now(),
+                        createdAt: widget.contract?.createdAt ?? DateTime.now(),
                       );
 
-                      await firestoreService.createContract(newContract);
+                      if (widget.contract == null) {
+                        
+                        await firestoreService.createContract(contract);
+                      } else {
+                        
+                        await firestoreService.updateContract(contract);
+                      }
+
                       Navigator.pop(context);
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error creating contract: $e')),
+                        SnackBar(content: Text('Error saving contract: $e')),
                       );
                     }
                   }
                 },
-                child: const Text(
-                  'Create Contract',
-                  style: TextStyle(fontSize: 16),
+                child: Text(
+                  widget.contract == null ? 'Create Contract' : 'Save Changes',
+                  style: const TextStyle(fontSize: 16),
                 ),
               ),
             ],
@@ -253,3 +294,4 @@ class _CreateContractScreenState extends State<CreateContractScreen> {
     super.dispose();
   }
 }
+

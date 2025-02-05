@@ -11,6 +11,7 @@ import 'screens/contract_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+   
   await Firebase.initializeApp(
     options:const FirebaseOptions(
       apiKey: "AIzaSyCn-Y_lwKG_1oVpRAwQ0vWkEyFkWm4-f4o", 
